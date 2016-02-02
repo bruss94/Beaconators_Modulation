@@ -28,6 +28,8 @@ mkdir(chunkpath);%Makes folder to put chunks
 fileID = fopen([file_name,'.det'],'r','l');%read and little endian
 
 A = zeros(num_entries/num_chunks,1);%initialize array
+%Below is the meat and potatoes of the code.
+%Creates a new binary file and writes 1/num_chunks of the data to it.
 for i = 1:num_chunks
     A = fread(fileID,num_entries/num_chunks,'int16');%output array dim and precision
     fid = fopen([chunkpath,'\',file_name,'_',num2str(i),'.det'],'w');
