@@ -1,0 +1,113 @@
+%TxRx_v1.m
+clc;
+
+NSPS = 16 ; % # samples per symbol
+Nsym = 1e2 ;
+Lfir = 32 ;
+shape = hamming(Lfir) ;
+syms = sign(randn(1,Nsym)) + j*sign(randn(1,Nsym)) ; % Dirac deltas
+syms_up = upsample(syms,NSPS-1) ; % Dirac deltas with NSPS-1 zeros in between
+
+figure(1)
+ax1(1) = subplot(2,1,1) ;
+plot(real(syms_up)) ;
+ylim(1.1*[-1 1]) ;
+title('symbols to be transmitted') ;
+ylabel('I') ;
+ax1(2) = subplot(2,1,2) ;
+plot(imag(syms_up)) ;
+ylim(1.1*[-1 1]) ;
+ylabel('Q') ;
+xlabel('sample index') ;
+linkaxes(ax1,'x') ;
+zoom on ;
+
+tx = filter(shape,1,[syms_up zeros(1,2*NSPS+Lfir)]) ; 
+
+figure(2)
+ax2(1) = subplot(2,1,1) ;
+plot(real(tx)) ;
+title('Tx') ;
+ylabel('I') ;
+ax2(2) = subplot(2,1,2) ;
+plot(imag(tx)) ;
+ylabel('Q') ;
+xlabel('sample index') ;
+linkaxes(ax2,'x') ;
+zoom on ;
+
+% channel
+% AWGN
+[nr,nc] = size(tx) ;
+cnoise = randn(1,nc)+j*randn(1,nc) ;
+
+% after matched filtering we'll have:
+sig_noise = 2*sum(abs(shape).^2) ; % I + Q channel noise
+N0 = 2*sig_noise ; % one-sided PSD
+% add EbNo calculation/measurement somewhere
+Eb = 0.1/16;
+xx = Eb/N0;
+
+
+rx = tx + 1*cnoise ;
+
+figure(3)
+ax3(1) = subplot(2,1,1) ;
+plot(real(rx)) ;
+title('Rx') ;
+ylabel('I') ;
+ax3(2) = subplot(2,1,2) ;
+plot(imag(rx)) ;
+ylabel('Q') ;
+xlabel('sample index') ;
+linkaxes(ax3,'x') ;
+zoom on ;
+
+frx = filter(shape,1,rx) ; % Rx filtered signal
+vv=var(frx);
+
+figure(4)
+ax4(1) = subplot(2,1,1) ;
+plot(real(frx)) ;
+title('filtered Rx') ;
+ylabel('I') ;
+ax4(2) = subplot(2,1,2) ;
+plot(imag(frx)) ;
+ylabel('Q') ;
+xlabel('sample index') ;
+linkaxes(ax4,'x') ;
+zoom on ;
+
+% where to slice?
+slice_ids = Lfir:(NSPS-1):length(frx) ;
+slice_ids = slice_ids(1:Nsym) ; % limit to comparison with number of symbols sent
+sfrx = frx(slice_ids) ;
+
+figure(5)
+plot(real(sfrx),imag(sfrx),'x') ;
+title('decision variable') ;
+xlabel('I') ;
+ylabel('Q') ;
+
+sym_est = sign(real(sfrx)) + j*sign(imag(sfrx)) ;
+err_ids = find(sym_est~=syms) ;
+SER = length(err_ids)/Nsym 
+BER = sum( abs(sign(real(sfrx(err_ids)))-real(syms(err_ids))) ...
+    + abs(sign(imag(sfrx(err_ids)))-imag(syms(err_ids))) )/(2*Nsym)/2
+
+% where are the errors occurring, given that 1+j was sent?
+err11_ids = [] ;
+for nn=1:length(err_ids),
+    if syms(err_ids(nn))==1+j, err11_ids = [err11_ids err_ids(nn)] ; end ;
+end ;
+
+figure(6)
+plot(real(sfrx),imag(sfrx),'x',real(sfrx(err11_ids)),imag(sfrx(err11_ids)),'ro') ;
+title('decision variables x and 1+j decision errors o') ;
+xlabel('I') ;
+ylabel('Q') ;
+v = axis ;
+line([v(1) v(2)],[0 0],'Color',[0 0 0]) ;
+line([0 0],[v(3) v(4)],'Color',[0 0 0]) ;
+zoom on ;
+
