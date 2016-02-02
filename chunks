@@ -1,0 +1,38 @@
+%This code will divide the .det file into individual file chunks for easier
+%processing/computer handling later. Must change certain variables for your
+%machine depending on where the data is located. These variables are
+%outlined with % symbols.
+
+clear all
+close all
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+filepath = 'C:\ICEPOD_data\';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+cd(filepath); %location of the ICEPOD data
+
+%%%%%%%%%%%%%%%%%%%%
+file_name = 'test1';
+%%%%%%%%%%%%%%%%%%%%
+f = dir([file_name,'.det']);
+fsz = f.bytes;%Size in bytes of the file.
+num_entries = fsz/2;%Every data entry is 2 bytes so # entries = fsz/2
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+num_chunks = 4;%number of chunks (2,4,8,16,32,etc)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+chunkpath = [filepath,file_name,'_chunks'];
+mkdir(chunkpath);%Makes folder to put chunks
+
+fileID = fopen([file_name,'.det'],'r','l');%read and little endian
+
+A = zeros(num_entries/num_chunks,1);%initialize array
+for i = 1:num_chunks
+    A = fread(fileID,num_entries/num_chunks,'int16');%output array dim and precision
+    fid = fopen([chunkpath,'\',file_name,'_',num2str(i),'.det'],'w');
+    fwrite(fid,A,'int16');
+    fclose(fid);
+end
+
+cd('C:\Users\Russell\Documents\MATLAB');%cd back into root directory
